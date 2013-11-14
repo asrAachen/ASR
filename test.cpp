@@ -1,7 +1,7 @@
 #include "Ngrams.h"
 
 int main() {
-    NGramReader* ngr = new NGramReader("../corpus", NGramType::ETrigram);
+    NGramReader* ngr = new NGramReader("../corpus", "../vocab");
     const NGramsMap* freqs = ngr->frequencyMap();
 
     FILE* fOut = fopen("frequencies.txt", "w");

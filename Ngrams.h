@@ -5,19 +5,11 @@
 
 typedef std::unordered_map<std::string, int> NGramsMap;
 
-enum NGramType {
-
-    EUnigram = 1,
-    EBigram,
-    ETrigram
-};
-
 class NGramReader {
 public:
-    NGramReader(const std::string& corpusFileName, NGramType type = ETrigram,
+    NGramReader(const std::string& corpusFileName,
                 const std::string& vocabFileName = std::string());
     const NGramsMap* frequencyMap();
-    const NGramsMap* vocabMap();
     size_t frequencyForKey(const std::string& key);
     ~NGramReader();
 
@@ -29,8 +21,6 @@ private:
 
 private:
     NGramsMap* frequencies;
-    NGramsMap* vocabFrequencies;
-    NGramType nType;
     std::ifstream fs;
     std::ofstream ofs;
     std::vector<std::string> words;
