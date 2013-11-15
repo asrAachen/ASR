@@ -1,2 +1,7 @@
 separate out the vocab list as before..
+
+write a method "count" which accepts the key and checks both the vocab and freq list for it.
+
+in test.cpp - implement part 1 by going through the test file given by martin, replacing the first word with all possible words in the vocab and summing over the frequencies.
+
 figure out count counts of uni/bigrams..
