@@ -1,0 +1,2 @@
+separate out the vocab list as before..
+figure out count counts of uni/bigrams..
