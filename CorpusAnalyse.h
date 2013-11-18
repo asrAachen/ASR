@@ -12,11 +12,11 @@ public:
     double p(const std::string& w);
     double p(const std::string& w, const std::string& v);
     double perplexity(const std::string& fileName, NGramType type, bool includeStartSymbol = true);
-    
+
 private:
     int countWords(const std::string& sentence);
     double max(double a, double b);
-        
+
 private:
     const NGramsMap* freq;
     const NGramsMap* vocabFreq;
@@ -25,8 +25,8 @@ private:
     double W;
     double N;
     double N0;
-    size_t size;  
+    size_t size;
 };
 
 
-#endif 
+#endif

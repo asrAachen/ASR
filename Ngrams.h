@@ -10,9 +10,9 @@
 typedef std::unordered_map<std::string, int> NGramsMap;
 
 enum NGramType {
-  EUnigram = 1,
-  EBigram,
-  ETrigram  
+    EUnigram = 1,
+    EBigram,
+    ETrigram
 };
 
 class NGramReader {
