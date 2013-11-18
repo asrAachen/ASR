@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include "Ngrams.h"
-#include <sstream>
 #include <stdexcept>
 #include <iterator>
+#include <iostream>
+
 
 using namespace std;
 
@@ -11,6 +12,7 @@ NGramReader::NGramReader(const std::string& corpusFileName,
                          const std::string& vocabFileName)
 {
     frequencies = new NGramsMap();
+    recompfrequencies = new NGramsMap();
 
     if (!vocabFileName.empty()) {
         processVocab(vocabFileName);
@@ -22,24 +24,23 @@ NGramReader::NGramReader(const std::string& corpusFileName,
         throw "Error reading the corpus";
     }
 
+    cSize = 0;
     sentence = "";
     while (!fs.eof()) {
         getline(fs,sentence);
-        std::transform(sentence.begin(), sentence.end(),sentence.begin(), ::tolower);
         std::stringstream  stream(sentence);
         while (!stream.eof()) {
             string word;
             stream >> word;
             try {
                 if (!vocabFileName.empty()) {
-                    int val = frequencies->at(word);
+                    int val = vocabFrequencies->at(word);
                 }
                 words.push_back(word);
             }
             catch (const std::out_of_range& oor) {
                 words.push_back("<unk>");
             }
-
         }
         if (!vocabFileName.empty()) {
             writeNewCorpus(words);
@@ -50,6 +51,7 @@ NGramReader::NGramReader(const std::string& corpusFileName,
         words.clear();
     }
     ofs.close();
+    recomputefreq();
 }
 
 const NGramsMap* NGramReader::frequencyMap()
@@ -57,11 +59,48 @@ const NGramsMap* NGramReader::frequencyMap()
     return frequencies;
 }
 
-size_t NGramReader::frequencyForKey(const std::string& key)
+const NGramsMap* NGramReader::vocab()
 {
-    return (*frequencies)[key];
+    return vocabFrequencies;
 }
 
+size_t NGramReader::corpusSize()
+{
+    return cSize;
+}
+
+//Recomputing Function
+int NGramReader::countWords(const std::string& sentence) {
+    int count = 0;
+    std::stringstream ss(sentence);
+    std::string word;
+    while( ss >> word ) ++count;
+    return count;
+}
+const NGramsMap* NGramReader::recomputedMap()
+{
+    return recompfrequencies;
+}
+void NGramReader::recomputefreq(void)
+{
+    sentence = "";
+    for (auto i = frequencies->begin(); i != frequencies->end(); ++i) {
+        sentence = i->first.c_str();
+        if ((countWords(sentence)==3))
+        {
+                std::stringstream  stream(sentence);
+                string word,word1;
+                stream >> word; //discard the first word in trigram
+                stream >> word;
+                stream >> word1;
+                word = word + " " + word1;
+                (*recompfrequencies)[word]+=i->second;
+                (*recompfrequencies)[word1]+=i->second;
+        }    
+        sentence = "";
+    }
+
+}
 
 void NGramReader::processCorpus(vector<std::string>& words)
 {
@@ -69,9 +108,10 @@ void NGramReader::processCorpus(vector<std::string>& words)
     it = words.begin();
     words.insert(it, "<s>");
     words.push_back("</s>");
-    
+
     std::string builder;
     for (size_t i = 0; i < words.size(); ++i) {
+        cSize++;
         builder.clear();
         for (size_t j = i; j < min((i + 3), words.size()); ++j) {
             if (builder.empty()) {
@@ -79,7 +119,8 @@ void NGramReader::processCorpus(vector<std::string>& words)
             } else {
                 builder+= " "+ words[j];
             }
-            (*frequencies)[builder] += 1; 
+            (*frequencies)[builder] += 1;
+            (*recompfrequencies)[builder] +=1;  //Trigrams for recompute process
         }
     }
 }
@@ -90,10 +131,12 @@ void NGramReader::processVocab( const std::string& vocabFile)
     if(fs.fail()) {
         throw "Error reading the vocab file";
     }
+
+    vocabFrequencies = new NGramsMap();
+
     while (!fs.eof()) {
         getline(fs,sentence);
-        std::transform(sentence.begin(), sentence.end(),sentence.begin(), ::tolower);
-        (*frequencies)[sentence] = 0;
+        (*vocabFrequencies)[sentence] = 0;
     }
     fs.close();
 
@@ -105,7 +148,7 @@ void NGramReader::writeNewCorpus(const std::vector<std::string>& words)
 
     std::ostringstream imploded;
     std::copy(words.begin(), words.end(),
-               std::ostream_iterator<std::string>(imploded, delim));
+              std::ostream_iterator<std::string>(imploded, delim));
     ofs <<imploded.str();
     ofs <<"\n";
 }
@@ -113,6 +156,9 @@ void NGramReader::writeNewCorpus(const std::vector<std::string>& words)
 
 NGramReader::~NGramReader()
 {
+    if (vocabFrequencies) {
+        vocabFrequencies->clear();
+    }
     frequencies->clear();
     fs.close();
 }
