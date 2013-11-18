@@ -1,3 +1,6 @@
+#ifndef NGRAMS_H
+#define NGRAMS_H
+
 #include <unordered_map>
 #include <string>
 #include <fstream>
@@ -18,17 +21,13 @@ public:
                 const std::string& vocabFileName = std::string());
     const NGramsMap* frequencyMap();
     const NGramsMap* vocab();
-    size_t count(const std::string& key);
     size_t corpusSize();
-    size_t countOfCount(NGramType type, int count);
-    size_t countOfCount(NGramType type,const std::string& v, int count);  
     ~NGramReader();
 
 private:
     void processCorpus(std::vector<std::string>& words);
     void processVocab( const std::string& vocabFile);
     void writeNewCorpus(const std::vector<std::string>& words);
-    int countWords(const std::string& sentence);
 
 
 private:
@@ -41,3 +40,4 @@ private:
     std::string sentence;
 };
 
+#endif
