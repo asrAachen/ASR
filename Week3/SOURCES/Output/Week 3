@@ -1,0 +1,36 @@
+
+
+Question 2b
+set xrange [1:850]
+set yrange [-4000:4000]
+plot "Question 2b.txt" using 1 with lines
+
+
+Question 2e
+awk 'NR>= 513*24+1 && NR<=513*24+513 {print}' Question\ 2a.txt > 25_spec.txt
+awk 'NR>= 513*94+1 && NR<=513*94+513 {print}' Question\ 2a.txt > 95_spec.txt
+awk 'NR>= 513*369+1 && NR<=513*369+513 {print}' Question\ 2a.txt > 370_spec.txt
+awk 'END{ for(i=1; i<=NR; i++) print i*8000/513 > "temp4.txt" }' freq_yrange.txt
+paste -d " " 25_spec.txt 95_spec.txt 370_spec.txt freq_yrange.txt> Question\ 2e.txt
+
+plot "Question 2e.txt" using 1 title 'Time frame 25' with lines, "Question 2e.txt" using 2 title 'Time frame 95' with lines, "Question 2e.txt" using 3 title 'Time frame 370' with lines
+
+
+Question 3a
+paste -d " " 25_out.txt 95_out.txt 370_out.txt freq_yrange.txt> Question\ 3a.txt
+set terminal png size 1440,900 enhanced font "Helvetica,20"
+set output 'Question 3a_25.png'
+set title "Question3a_25"
+plot "Question 3a.txt" using 4:1 title 'CC for 25' with lines
+
+set terminal png size 1440,900 enhanced font "Helvetica,20"
+set output 'Question 3a_95.png'
+set title "Question3a_95"
+plot "Question 3a.txt" using 4:2 title 'CC for 95' with lines
+
+set terminal png size 1440,900 enhanced font "Helvetica,20"
+set output 'Question 3a_370.png'
+set title "Question3a_370"
+plot "Question 3a.txt" using 4:3 title 'CC for 370' with lines
+
+
