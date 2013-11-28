@@ -20,7 +20,7 @@
 #define MIN(x,y)  (((x) > (y)) ? (y) : (x))
 
 #define M_SAMPLES            1000000
-#define SAMPLE_RATE          16000
+#define SAMPLE_RATE          8000
 #define WINDOW_SHIFT         10*SAMPLE_RATE/1000
 #define WINDOW_SIZE          25*SAMPLE_RATE/1000
 #define DFT_LENGTH           1024

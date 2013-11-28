@@ -23,16 +23,76 @@
 #include "GlobalSettings.h"
 #include "SignalAnalysis.h"
 
+
+/*****************************************************************************/
+static double Freq_To_Mel(double freq)
+/*****************************************************************************/
+{
+  return 2595 * log10(1 + freq/700.0);
+}
+
+/*****************************************************************************/
+static double GetCenterFrequency(unsigned int filterBand)
+/*****************************************************************************/
+{
+  double minMel = 0.0;
+  double maxMel = Freq_To_Mel(SAMPLE_RATE/2);
+  double centreMultiple = ( maxMel - minMel ) / (N_MEL_FILTERS + 1);  // The +1 accounts for the 1st and last one
+  
+  return centreMultiple * filterBand;
+}
+
+
+/*****************************************************************************/
+static double GetFilterBankValue(unsigned int frequencyBand, unsigned int filterBand)
+/*****************************************************************************/
+{
+  double filterValue = 0.0f;
+
+  double frequency = frequencyBand * SAMPLE_RATE / (DFT_LENGTH/2+1); // Fk = k*Fs/N
+  double melFrequency = Freq_To_Mel(frequency);
+
+  double prevCenter = GetCenterFrequency(filterBand - 1);                
+  double thisCenter = GetCenterFrequency(filterBand);
+  double nextCenter = GetCenterFrequency(filterBand + 1);
+
+  if(melFrequency >= 0 && melFrequency < prevCenter) {
+    filterValue = 0.0f;
+  }
+  else if(melFrequency >= prevCenter && melFrequency < thisCenter) {
+    filterValue = (melFrequency - prevCenter) / (thisCenter - prevCenter);
+  }
+  else if(melFrequency >= thisCenter && melFrequency < nextCenter) {
+    filterValue = (melFrequency - nextCenter) / (thisCenter - nextCenter);
+  }
+  else if(melFrequency >= nextCenter){
+    filterValue = 0.0f;
+  }
+
+  return filterValue;
+}
+
+
 /*****************************************************************************/
 static void Calc_Mel_Filter_Cepstrum(double *Abs_Fourier, FILE *fp)
 /*****************************************************************************/
-/* this is just a dummy function! */
 {
-  float feature;
-  int cmp;
+  
+  float feature, Y;
+  Y = 0.0;
+  for(int m = 0; m < N_CMP_FILE; ++m) { 
+    feature = 0.0;
 
-  for(cmp=0; cmp<N_CMP_FILE; cmp++) { 
-    feature=0.0;
+    // Calculate the filtered output.
+    for(int n = 1; n <= N_MEL_FILTERS; ++n) {
+      double weightedSpectralSum = 0.0f;
+      for(int j = 0; j < DFT_LENGTH/2+1; ++j) {
+        weightedSpectralSum += fabs(Abs_Fourier[j] * GetFilterBankValue(j, n));
+      }
+
+      Y = log(weightedSpectralSum);
+      feature += Y * cos(((m * M_PI) / N_MEL_FILTERS) * (n - 0.5f));
+    }
     fwrite(&feature, sizeof(float), 1, fp);
   }
 }
@@ -41,11 +101,11 @@ static void Calc_Mel_Filter_Cepstrum(double *Abs_Fourier, FILE *fp)
 static void Abs_Spectrum(double *Re_Fourier, double *Im_Fourier, FILE *fp)
 /*****************************************************************************/
 {
-  static double Abs_Fourier[DFT_LENGTH/2+1];
+  static double Abs_Fourier[DFT_LENGTH/2 + 1];
   int i;
   
-  for(i=0; i<=DFT_LENGTH/2; i++)
-    Abs_Fourier[i]=sqrt(Re_Fourier[i]*Re_Fourier[i] + Im_Fourier[i]*Im_Fourier[i]);
+  for(i = 0; i <= DFT_LENGTH/2; i++)
+    Abs_Fourier[i] = sqrt(Re_Fourier[i] * Re_Fourier[i] + Im_Fourier[i] * Im_Fourier[i]);
 
   Calc_Mel_Filter_Cepstrum(Abs_Fourier, fp);
 }
