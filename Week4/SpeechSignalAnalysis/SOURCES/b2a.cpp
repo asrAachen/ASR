@@ -2,6 +2,17 @@
 #include <iostream>
 #include <stdio.h>
 #include <string>
+#include <algorithm>
+
+
+template <class T>
+void endswap(T *objp)
+{
+  unsigned char *memp = reinterpret_cast<unsigned char*>(objp);
+  std::reverse(memp, memp + sizeof(T));
+}
+
+
 using namespace std;
 
 int main(int argc, char *argv[]) {

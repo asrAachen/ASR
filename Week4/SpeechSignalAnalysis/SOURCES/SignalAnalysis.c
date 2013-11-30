@@ -23,6 +23,8 @@
 #include "GlobalSettings.h"
 #include "SignalAnalysis.h"
 
+static int computedFilterBank = 0;
+static int triangleCentres[N_MEL_FILTERS + 2];
 
 /*****************************************************************************/
 static double Freq_To_Mel(double freq)
@@ -32,14 +34,48 @@ static double Freq_To_Mel(double freq)
 }
 
 /*****************************************************************************/
+static double Mel_To_Freq(double freq)
+/*****************************************************************************/
+{
+  return 700 * (pow(10, freq/2595.0) - 1);
+}
+
+
+/*****************************************************************************/
+static void ComputeFilterBank()
+/*****************************************************************************/
+{
+  double minFreq = Freq_To_Mel(0.0);
+  double maxFreq = Freq_To_Mel(SAMPLE_RATE/2);
+
+  double h[N_MEL_FILTERS + 2];
+  int i;
+
+  for(i = 0; i < N_MEL_FILTERS + 2; ++i) {
+    h[i] = Mel_To_Freq(minFreq+((maxFreq - minFreq) * i / (N_MEL_FILTERS + 1)));
+  }
+
+
+  for(i = 0; i < N_MEL_FILTERS + 2; ++i) {
+    triangleCentres[i] = floor((DFT_LENGTH/2+1)*h[i]/(SAMPLE_RATE/2));
+  }
+
+}
+
+/*****************************************************************************/
 static double GetCenterFrequency(unsigned int filterBand)
 /*****************************************************************************/
 {
-  double minMel = 0.0;
-  double maxMel = Freq_To_Mel(SAMPLE_RATE/2);
-  double centreMultiple = ( maxMel - minMel ) / (N_MEL_FILTERS + 1);  // The +1 accounts for the 1st and last one
-  
-  return centreMultiple * filterBand;
+  if (computedFilterBank == 0) {
+    ComputeFilterBank();
+    int j;
+    for (j = 0; j < N_MEL_FILTERS + 2; ++j) {
+      printf("%d ", triangleCentres[j]);
+    }
+    computedFilterBank = 1;
+  }
+
+  return triangleCentres[filterBand];
 }
 
 
@@ -49,26 +85,23 @@ static double GetFilterBankValue(unsigned int frequencyBand, unsigned int filter
 {
   double filterValue = 0.0f;
 
-  double frequency = frequencyBand * SAMPLE_RATE / (DFT_LENGTH/2+1); // Fk = k*Fs/N
-  double melFrequency = Freq_To_Mel(frequency);
-
   double prevCenter = GetCenterFrequency(filterBand - 1);                
   double thisCenter = GetCenterFrequency(filterBand);
   double nextCenter = GetCenterFrequency(filterBand + 1);
 
-  if(melFrequency >= 0 && melFrequency < prevCenter) {
-    filterValue = 0.0f;
-  }
-  else if(melFrequency >= prevCenter && melFrequency < thisCenter) {
-    filterValue = (melFrequency - prevCenter) / (thisCenter - prevCenter);
-  }
-  else if(melFrequency >= thisCenter && melFrequency < nextCenter) {
-    filterValue = (melFrequency - nextCenter) / (thisCenter - nextCenter);
-  }
-  else if(melFrequency >= nextCenter){
-    filterValue = 0.0f;
-  }
 
+  if(frequencyBand < prevCenter) {
+    filterValue = 0.0f;
+  }
+  else if(frequencyBand >= prevCenter && frequencyBand < thisCenter) {
+    filterValue = (frequencyBand - prevCenter) / (thisCenter - prevCenter);
+  }
+  else if(frequencyBand >= thisCenter && frequencyBand < nextCenter) {
+    filterValue = (frequencyBand - nextCenter) / (thisCenter - nextCenter);
+  }
+  else if(frequencyBand >= nextCenter){
+    filterValue = 0.0f;
+  }
   return filterValue;
 }
 
@@ -78,20 +111,22 @@ static void Calc_Mel_Filter_Cepstrum(double *Abs_Fourier, FILE *fp)
 /*****************************************************************************/
 {
   
-  float feature, Y;
-  Y = 0.0;
-  for(int m = 0; m < N_CMP_FILE; ++m) { 
+  float feature;
+  double Fn = 0.0;
+  int m, n, j;
+  for(m = 0; m < N_CMP_FILE; ++m) { 
     feature = 0.0;
 
     // Calculate the filtered output.
-    for(int n = 1; n <= N_MEL_FILTERS; ++n) {
+    for(n = 1; n <= N_MEL_FILTERS; ++n) {
       double weightedSpectralSum = 0.0f;
-      for(int j = 0; j < DFT_LENGTH/2+1; ++j) {
+      for(j = 0; j <= DFT_LENGTH/2; ++j) {
         weightedSpectralSum += fabs(Abs_Fourier[j] * GetFilterBankValue(j, n));
       }
 
-      Y = log(weightedSpectralSum);
-      feature += Y * cos(((m * M_PI) / N_MEL_FILTERS) * (n - 0.5f));
+      //printf("%f \n", weightedSpectralSum);
+      Fn = log(weightedSpectralSum);
+      feature += Fn * cos(((m * M_PI) / N_MEL_FILTERS) * (n - 0.5f));
     }
     fwrite(&feature, sizeof(float), 1, fp);
   }
